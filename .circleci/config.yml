@@ -1,0 +1,77 @@
+version: 2.1
+
+references:
+  restore-image00-build-key: &restore-image00-build-key
+    restore_cache:
+      key: build-key-{{ .Environment.CACHE_VERSION }}-{{ checksum "./image00/Dockerfile" }}
+  save-image00-build-key: &save-image00-build-key
+    save_cache:
+      paths:
+        - ./image00_build_key
+      key: build-key-{{ .Environment.CACHE_VERSION }}-{{ checksum "./image00/Dockerfile" }}
+  restore-image01-build-key: &restore-image01-build-key
+    restore_cache:
+      key: build-key-{{ .Environment.CACHE_VERSION }}-{{ checksum "./image01/Dockerfile" }}
+  save-image01-build-key: &save-image01-build-key
+    save_cache:
+      paths:
+        - ./image01_build_key
+      key: build-key-{{ .Environment.CACHE_VERSION }}-{{ checksum "./image01/Dockerfile" }}
+
+jobs:
+  build-image00:
+    executor: default
+    steps:
+      - checkout
+      - <<: *restore-image00-build-key
+      - run:
+          name: Skip if unchanged
+          command: |
+            if [ -e ./image00_build_key ]
+            then
+              echo No changes. Skip building image.
+              circleci-agent step halt
+            else
+              echo Changes found in the image.
+            fi
+      - run:
+          name: Docker Login
+          command: echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
+      - run:
+          name: Build Docker image
+          command: docker image build -t image00 ./image00
+      - run:
+          name: Generate build key
+          command: echo $(git rev-parse HEAD) > ./image00_build_key
+      - <<: *save-image00-build-key
+  build-image01:
+    executor: default
+    steps:
+      - checkout
+      - <<: *restore-image01-build-key
+      - run:
+          name: Skip if unchanged
+          command: |
+            if [ -e ./image01_build_key ]
+            then
+              echo No changes. Skip building image.
+              circleci-agent step halt
+            else
+              echo Changes found in the image.
+            fi
+      - run:
+          name: Docker Login
+          command: echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
+      - run:
+          name: Build Docker image
+          command: docker image build -t image00 ./image00
+      - run:
+          name: Generate build key
+          command: echo $(git rev-parse HEAD) > ./image01_build_key
+      - <<: *save-image01-build-key
+workflows:
+  version: 2
+  main:
+    jobs:
+      - build-image00
+      - build-image01
