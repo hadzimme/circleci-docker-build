@@ -74,6 +74,7 @@ jobs:
           name: Generate build key
           command: echo $(git rev-parse HEAD) > ./image01_build_key
       - <<: *save-image01-build-key
+
 workflows:
   version: 2
   main:
